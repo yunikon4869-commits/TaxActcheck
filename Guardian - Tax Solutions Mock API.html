@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Guardian - Tax Solutions Mock API</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f0ff; color: #3e0a75; }
+h1 { color: #6a0dad; }
+button { margin-top: 5px; margin-bottom: 10px; padding: 5px 10px; background-color: #6a0dad; color: white; border: none; cursor: pointer; border-radius: 4px; }
+button:hover { background-color: #4b006b; }
+input, select, textarea { margin-bottom: 10px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 100%; }
+pre { background-color: #e9dfff; padding: 10px; border-radius: 4px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+th, td { border: 1px solid #d0b3ff; padding: 8px; text-align: left; }
+th { background-color: #d9b3ff; }
+hr { margin: 20px 0; border-color: #d0b3ff; }
+label { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Guardian - Tax Solutions Mock API</h1>
+
+<!-- 1. Login -->
+<div>
+<h2>1. Login</h2>
+<input id="username" placeholder="Username" value="testuser">
+<input id="password" type="password" placeholder="Password" value="password123">
+<button onclick="login()">Login</button>
+<pre id="loginOutput"></pre>
+</div>
+
+<hr>
+
+<!-- 2. Get All Clients -->
+<div>
+<h2>2. Get All Clients</h2>
+<button onclick="getClients()">Get Clients</button>
+<div id="clientsOutput"></div>
+</div>
+
+<hr>
+
+<!-- 3. Upload CSV -->
+<div>
+<h2>3. Upload Client CSV</h2>
+<label>Select CSV file with headers: firstName,lastName,email,phone,street,city,state,zip</label>
+<input type="file" id="csvFile">
+<button onclick="uploadCSV()">Upload CSV</button>
+<pre id="csvOutput"></pre>
+</div>
+
+<hr>
+
+<!-- 4. Get Client Tax Returns -->
+<div>
+<h2>4. Get Client Tax Returns</h2>
+<input id="clientId" placeholder="Client ID (e.g., C-1001)">
+<button onclick="getTaxReturns()">Get Tax Returns</button>
+<div id="taxReturnsOutput"></div>
+</div>
+
+<hr>
+
+<!-- 5. Create New Client -->
+<div>
+<h2>5. Create New Client</h2>
+<input id="newFirstName" placeholder="First Name">
+<input id="newLastName" placeholder="Last Name">
+<input id="newEmail" placeholder="Email">
+<button onclick="createClient()">Create Client</button>
+<pre id="createClientOutput"></pre>
+</div>
+
+<hr>
+
+<!-- 6. Update Client -->
+<div>
+<h2>6. Update Client</h2>
+<input id="updateClientId" placeholder="Client ID">
+<input id="updateEmail" placeholder="New Email">
+<button onclick="updateClient()">Update Client</button>
+<pre id="updateClientOutput"></pre>
+</div>
+
+<hr>
+
+<!-- 7. Add Note -->
+<div>
+<h2>7. Add Internal Note</h2>
+<input id="noteClientId" placeholder="Client ID">
+<textarea id="noteText" placeholder="Enter note"></textarea>
+<button onclick="addNote()">Add Note</button>
+<pre id="noteOutput"></pre>
+</div>
+
+<script>
+// ---- Mock Data ----
+let clients = [
+    {
+        clientId: 'C-1001',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@email.com',
+        phone: '+13105551234',
+        address: { street:'9021 Venice Blvd', city:'Los Angeles', state:'CA', zip:'90034' },
+        taxYear: 2025,
+        status: 'draft',
+        taxReturns:[
+            { returnId:'R-2001', taxYear:2025, forms:['1040','Schedule C'], status:'draft', eFileStatus:'pending', refund:1250.50, paymentDue:0, pdfUrl:'#' }
+        ],
+        notes: []
+    },
+    {
+        clientId: 'C-1002',
+        firstName: 'Maria',
+        lastName: 'Lopez',
+        email: 'maria.lopez@email.com',
+        phone: '+13105559876',
+        address: { street:'123 Sunset Blvd', city:'Los Angeles', state:'CA', zip:'90036' },
+        taxYear: 2025,
+        status: 'filed',
+        taxReturns:[
+            { returnId:'R-2002', taxYear:2025, forms:['1040'], status:'filed', eFileStatus:'accepted', refund:2800, paymentDue:0, pdfUrl:'#' }
+        ],
+        notes: ['Called client to confirm W-2s.']
+    }
+];
+
+let accessToken = null;
+
+// ---- Functions ----
+function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    if(username && password) {
+        accessToken = 'mocked-jwt-token';
+        document.getElementById('loginOutput').textContent = `Logged in successfully. Token: ${accessToken}`;
+    } else {
+        document.getElementById('loginOutput').textContent = 'Login failed: enter username and password';
+    }
+}
+
+// Display clients in table
+function getClients() {
+    if(!accessToken) return alert('Login first!');
+    if(clients.length === 0) {
+        document.getElementById('clientsOutput').innerHTML = 'No clients available.';
+        return;
+    }
+    let html = '<table><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th></tr>';
+    clients.forEach(c => {
+        html += `<tr>
+            <td>${c.clientId}</td>
+            <td>${c.firstName} ${c.lastName}</td>
+            <td>${c.email}</td>
+            <td>${c.phone}</td>
+            <td>${c.status}</td>
+        </tr>`;
+    });
+    html += '</table>';
+    document.getElementById('clientsOutput').innerHTML = html;
+}
+
+// Display tax returns with forms, e-file, refund/payment
+function getTaxReturns() {
+    if(!accessToken) return alert('Login first!');
+    const clientId = document.getElementById('clientId').value;
+    const client = clients.find(c => c.clientId === clientId);
+    if(!client) {
+        document.getElementById('taxReturnsOutput').textContent = 'Client not found';
+        return;
+    }
+    if(client.taxReturns.length === 0) {
+        document.getElementById('taxReturnsOutput').textContent = 'No tax returns for this client.';
+        return;
+    }
+    let html = '<table><tr><th>Return ID</th><th>Year</th><th>Forms</th><th>Status</th><th>E-File</th><th>Refund</th><th>Payment Due</th></tr>';
+    client.taxReturns.forEach(r => {
+        html += `<tr>
+            <td>${r.returnId}</td>
+            <td>${r.taxYear}</td>
+            <td>${r.forms.join(', ')}</td>
+            <td>${r.status}</td>
+            <td>${r.eFileStatus}</td>
+            <td>$${r.refund.toFixed(2)}</td>
+            <td>$${r.paymentDue.toFixed(2)}</td>
+        </tr>`;
+    });
+    html += '</table>';
+    document.getElementById('taxReturnsOutput').innerHTML = html;
+}
+
+// Create client
+function createClient() {
+    if(!accessToken) return alert('Login first!');
+    const firstName = document.getElementById('newFirstName').value;
+    const lastName = document.getElementById('newLastName').value;
+    const email = document.getElementById('newEmail').value;
+    const clientId = 'C-' + (1000 + clients.length + 1);
+    const newClient = { clientId, firstName, lastName, email, phone:'', address:{}, taxYear:2025, status:'draft', taxReturns:[], notes:[] };
+    clients.push(newClient);
+    document.getElementById('createClientOutput').textContent = `Client created: ${JSON.stringify(newClient, null, 2)}`;
+}
+
+// Update client
+function updateClient() {
+    if(!accessToken) return alert('Login first!');
+    const clientId = document.getElementById('updateClientId').value;
+    const newEmail = document.getElementById('updateEmail').value;
+    const client = clients.find(c => c.clientId === clientId);
+    if(!client) {
+        document.getElementById('updateClientOutput').textContent = 'Client not found';
+        return;
+    }
+    if(newEmail) client.email = newEmail;
+    document.getElementById('updateClientOutput').textContent = `Client updated: ${JSON.stringify(client, null, 2)}`;
+}
+
+// Add internal note
+function addNote() {
+    if(!accessToken) return alert('Login first!');
+    const clientId = document.getElementById('noteClientId').value;
+    const note = document.getElementById('noteText').value;
+    const client = clients.find(c => c.clientId === clientId);
+    if(!client) {
+        document.getElementById('noteOutput').textContent = 'Client not found';
+        return;
+    }
+    client.notes.push(note);
+    document.getElementById('noteOutput').textContent = `Note added. All notes:\n${client.notes.join('\n')}`;
+}
+
+// CSV Upload
+function uploadCSV() {
+    if(!accessToken) return alert('Login first!');
+    const fileInput = document.getElementById('csvFile');
+    if (!fileInput.files.length) return alert('Select a CSV file first.');
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/);
+        const headers = lines[0].split(',');
+        let count = 0;
+        for(let i=1;i<lines.length;i++){
+            if(!lines[i].trim()) continue;
+            const data = lines[i].split(',');
+            const client = {
+                clientId: 'C-' + (1000 + clients.length + 1),
+                firstName: data[headers.indexOf('firstName')],
+                lastName: data[headers.indexOf('lastName')],
+                email: data[headers.indexOf('email')],
+                phone: data[headers.indexOf('phone')],
+                address: {
+                    street: data[headers.indexOf('street')],
+                    city: data[headers.indexOf('city')],
+                    state: data[headers.indexOf('state')],
+                    zip: data[headers.indexOf('zip')]
+                },
+                taxYear: 2025,
+                status: 'draft',
+                taxReturns: [],
+                notes: []
+            };
+            clients.push(client);
+            count++;
+        }
+        document.getElementById('csvOutput').textContent = `Imported ${count} clients from CSV.`;
+        getClients(); // refresh table
+    };
+    reader.readAsText(file);
+}
+</script>
+</body>
+</html>
